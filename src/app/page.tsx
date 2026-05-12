@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Layers, BarChart3, Newspaper, Search, Share2, Map as MapIcon, X } from 'lucide-react';
 import LayerPanel from '@/components/LayerPanel';
 import IntelFeed from '@/components/IntelFeed';
 import MarketsPanel from '@/components/MarketsPanel';
@@ -15,6 +16,17 @@ import ViewPresets from '@/components/ViewPresets';
 import KeyboardShortcuts from '@/components/KeyboardShortcuts';
 
 const OsirisMap = dynamic(() => import('@/components/OsirisMap'), { ssr: false });
+
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
+  return isMobile;
+}
 
 export default function Dashboard() {
   const dataRef = useRef<any>({});
@@ -36,6 +48,8 @@ export default function Dashboard() {
   const [showMarkets, setShowMarkets] = useState(true);
   const [showIntel, setShowIntel] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [mobilePanel, setMobilePanel] = useState<'layers'|'markets'|'intel'|'search'|null>(null);
+  const isMobile = useIsMobile();
   const startTime = useRef(Date.now());
   const geocodeCache = useRef<Map<string, string>>(new Map());
   const geocodeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -288,37 +302,47 @@ export default function Dashboard() {
       </ErrorBoundary>
 
       {/* ── HEADER ── */}
-      <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 1, delay: 2.5 }} className="absolute top-5 left-5 z-[200] pointer-events-none flex items-center gap-3">
-        <div className="w-9 h-9 flex items-center justify-center relative">
-          <div className="w-7 h-7 rounded-full border-2 border-[var(--gold-primary)] flex items-center justify-center animate-glow-pulse">
-            <div className="w-3.5 h-3.5 rounded-full bg-[var(--gold-primary)]/30 border border-[var(--gold-primary)]/60" />
+      <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 1, delay: 2.5 }} className={`absolute top-3 left-3 md:top-5 md:left-5 z-[200] pointer-events-none flex items-center gap-2 md:gap-3`}>
+        <div className="w-7 h-7 md:w-9 md:h-9 flex items-center justify-center relative">
+          <div className="w-5 h-5 md:w-7 md:h-7 rounded-full border-2 border-[var(--gold-primary)] flex items-center justify-center animate-glow-pulse">
+            <div className="w-2.5 h-2.5 md:w-3.5 md:h-3.5 rounded-full bg-[var(--gold-primary)]/30 border border-[var(--gold-primary)]/60" />
           </div>
           <div className="absolute w-[1px] h-full bg-[var(--gold-primary)]/30" />
           <div className="absolute w-full h-[1px] bg-[var(--gold-primary)]/30" />
         </div>
         <div>
-          <h1 className="text-xl font-bold tracking-[0.5em] text-[var(--text-heading)] font-mono">OSIRIS</h1>
-          <span className="text-[7px] text-[var(--gold-primary)] font-mono tracking-[0.3em] opacity-80">GLOBAL INTELLIGENCE PLATFORM</span>
+          <h1 className="text-base md:text-xl font-bold tracking-[0.4em] md:tracking-[0.5em] text-[var(--text-heading)] font-mono">OSIRIS</h1>
+          <span className="text-[6px] md:text-[7px] text-[var(--gold-primary)] font-mono tracking-[0.2em] md:tracking-[0.3em] opacity-80">GLOBAL INTELLIGENCE PLATFORM</span>
         </div>
       </motion.div>
 
-      {/* ── TOP-RIGHT STATUS ── */}
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 3 }} className="absolute top-4 right-5 z-[200] pointer-events-none flex items-center gap-4 text-[7px] font-mono tracking-widest text-[var(--text-muted)]">
+      {/* ── TOP-RIGHT STATUS (desktop) ── */}
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 3 }} className="status-bar-desktop absolute top-3 right-3 md:top-4 md:right-5 z-[200] pointer-events-none flex items-center gap-2 md:gap-4 text-[6px] md:text-[7px] font-mono tracking-widest text-[var(--text-muted)]">
         <span>SYS: <span className={backendStatus === 'connected' ? 'text-[var(--alert-green)]' : 'text-[var(--alert-red)]'}>{backendStatus.toUpperCase()}</span></span>
-        <span>THREAT: <span style={{ color: threatColor, fontWeight: 700 }}>{threatLevel}</span></span>
-        {spaceWeather && <span>SOLAR: <span style={{ color: spaceWeather.storm_color, fontWeight: 700 }}>Kp{spaceWeather.kp_index}</span></span>}
-        <span>UPTIME: <span className="text-[var(--gold-primary)]">{uptime}</span></span>
-        <span>V2.0.0</span>
+        <span>THREAT: <span style={{ color: threatColor, fontWeight: 700 }} className={threatLevel === 'CRITICAL' ? 'animate-threat-flash' : ''}>{threatLevel}</span></span>
+        {spaceWeather && <span className="hidden lg:inline">SOLAR: <span style={{ color: spaceWeather.storm_color, fontWeight: 700 }}>Kp{spaceWeather.kp_index}</span></span>}
+        <span className="hidden lg:inline">UPTIME: <span className="text-[var(--gold-primary)]">{uptime}</span></span>
+        <span>V2.1</span>
       </motion.div>
 
-      {/* ── LEFT HUD ── */}
-      <div className="absolute left-5 top-20 bottom-24 w-72 flex flex-col gap-3 z-[200] pointer-events-none overflow-y-auto styled-scrollbar pr-1">
+      {/* ── MOBILE: Compact top status ── */}
+      {isMobile && (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 2.5 }} className="absolute top-3 right-3 z-[200] pointer-events-none flex items-center gap-2">
+          <div className="glass-panel px-2 py-1 flex items-center gap-2 text-[6px] font-mono tracking-wider">
+            <div className={`w-1.5 h-1.5 rounded-full ${backendStatus === 'connected' ? 'bg-[var(--alert-green)]' : 'bg-[var(--alert-red)]'} animate-osiris-pulse`} />
+            <span style={{ color: threatColor, fontWeight: 700 }}>{threatLevel}</span>
+          </div>
+        </motion.div>
+      )}
+
+      {/* ── LEFT HUD (desktop) ── */}
+      <div className="desktop-panel absolute left-5 top-20 bottom-24 w-72 flex flex-col gap-3 z-[200] pointer-events-none overflow-y-auto styled-scrollbar pr-1">
         {showLayers && (
           <>
             <LayerPanel data={data} activeLayers={activeLayers} setActiveLayers={setActiveLayers} />
             <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.5 }} className="glass-panel px-3 py-2.5 pointer-events-auto">
               <div className="grid grid-cols-5 gap-2 text-center">
-                <div><div className="hud-label">AIRCRAFT</div><div className="hud-value text-[10px]">{totalFlights.toLocaleString()}</div></div>
+                <div><div className="hud-label">AIRCRAFT</div><div className="hud-value text-[10px] animate-data-pulse">{totalFlights.toLocaleString()}</div></div>
                 <div><div className="hud-label">SATS</div><div className="hud-value text-[10px]">{(data.satellites?.length||0).toLocaleString()}</div></div>
                 <div><div className="hud-label">CCTV</div><div className="hud-value text-[10px]">{(data.cameras?.length||0).toLocaleString()}</div></div>
                 <div><div className="hud-label">WEATHER</div><div className="hud-value text-[10px]" style={{ color: '#E040FB' }}>{(data.weather_events?.length||0)}</div></div>
@@ -330,8 +354,8 @@ export default function Dashboard() {
         )}
       </div>
 
-      {/* ── RIGHT HUD ── */}
-      <div className="absolute right-5 top-20 bottom-24 w-80 flex flex-col gap-3 z-[200] pointer-events-auto overflow-y-auto styled-scrollbar pr-1">
+      {/* ── RIGHT HUD (desktop) ── */}
+      <div className="desktop-panel absolute right-5 top-20 bottom-24 w-80 flex flex-col gap-3 z-[200] pointer-events-auto overflow-y-auto styled-scrollbar pr-1">
         <div className="flex gap-2 items-start">
           <div className="flex-1"><SearchBar onLocate={(lat, lng) => setFlyToLocation({ lat, lng, ts: Date.now() })} /></div>
           <div className="relative"><SharePanel mapView={mapView} activeLayers={activeLayers} mouseCoords={mouseCoords} /></div>
@@ -340,34 +364,106 @@ export default function Dashboard() {
         {showIntel && <IntelFeed data={data} onLocate={(lat, lng) => setFlyToLocation({ lat, lng, ts: Date.now() })} />}
       </div>
 
-      {/* ── BOTTOM CENTER ── */}
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 3, duration: 0.8 }} className="absolute bottom-5 left-1/2 -translate-x-1/2 z-[200] pointer-events-auto">
-        <div className="glass-panel px-5 py-2.5 flex items-center gap-5 osiris-glow">
-          <div className="flex flex-col items-center min-w-[110px]">
-            <div className="hud-label">COORDINATES</div>
-            <div className="text-[10px] font-mono font-bold text-[var(--gold-primary)] tracking-wide">{mouseCoords ? `${mouseCoords.lat.toFixed(4)}, ${mouseCoords.lng.toFixed(4)}` : '—'}</div>
+      {/* ═══ MOBILE UI ═══ */}
+      {isMobile && (
+        <>
+          {/* Mobile Bottom Navigation */}
+          <div className="mobile-nav">
+            <div className="glass-panel mobile-nav-inner">
+              {[
+                { id: 'layers' as const, icon: Layers, label: 'LAYERS' },
+                { id: 'markets' as const, icon: BarChart3, label: 'MARKETS' },
+                { id: 'intel' as const, icon: Newspaper, label: 'INTEL' },
+                { id: 'search' as const, icon: Search, label: 'SEARCH' },
+              ].map(tab => (
+                <button key={tab.id} onClick={() => setMobilePanel(mobilePanel === tab.id ? null : tab.id)}
+                  className={`mobile-nav-btn ${mobilePanel === tab.id ? 'active' : ''}`}>
+                  <tab.icon className="w-4 h-4" />
+                  <span>{tab.label}</span>
+                </button>
+              ))}
+            </div>
           </div>
-          <div className="w-px h-7 bg-[var(--border-primary)]" />
-          <div className="flex flex-col items-center min-w-[160px] max-w-[280px]">
-            <div className="hud-label">LOCATION</div>
-            <div className="text-[9px] text-[var(--text-secondary)] font-mono truncate max-w-[280px]">{locationLabel || 'Hover over map...'}</div>
-          </div>
-          <div className="w-px h-7 bg-[var(--border-primary)]" />
-          <div className="flex flex-col items-center">
-            <div className="hud-label">ZOOM</div>
-            <div className="text-[10px] font-mono font-bold text-[var(--gold-primary)]">{mapView.zoom.toFixed(1)}</div>
-          </div>
-        </div>
-      </motion.div>
 
-      {/* ── Scale Bar ── */}
-      <div className="absolute bottom-[4.5rem] left-[20rem] z-[201] pointer-events-none">
+          {/* Mobile Drawer */}
+          <AnimatePresence>
+            {mobilePanel && (
+              <motion.div
+                initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+                transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+                className="fixed bottom-[60px] left-0 right-0 max-h-[60vh] z-[400] glass-panel rounded-b-none overflow-y-auto styled-scrollbar"
+                style={{ paddingBottom: 'env(safe-area-inset-bottom, 8px)' }}
+              >
+                <div className="mobile-drawer-handle" />
+                <div className="px-3 pb-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="hud-text text-[9px] text-[var(--text-primary)]">
+                      {mobilePanel === 'layers' ? 'LAYERS & STATS' : mobilePanel === 'markets' ? 'MARKETS & INTEL' : mobilePanel === 'intel' ? 'INTEL FEED' : 'SEARCH'}
+                    </span>
+                    <button onClick={() => setMobilePanel(null)} className="text-[var(--text-muted)] p-1"><X className="w-4 h-4" /></button>
+                  </div>
+                  {mobilePanel === 'layers' && (
+                    <>
+                      <div className="glass-panel-sm p-2 mb-2">
+                        <div className="grid grid-cols-5 gap-1 text-center">
+                          <div><div className="hud-label" style={{fontSize:'6px'}}>AIR</div><div className="hud-value text-[9px]">{totalFlights.toLocaleString()}</div></div>
+                          <div><div className="hud-label" style={{fontSize:'6px'}}>SAT</div><div className="hud-value text-[9px]">{(data.satellites?.length||0)}</div></div>
+                          <div><div className="hud-label" style={{fontSize:'6px'}}>CAM</div><div className="hud-value text-[9px]">{(data.cameras?.length||0)}</div></div>
+                          <div><div className="hud-label" style={{fontSize:'6px'}}>WX</div><div className="hud-value text-[9px]" style={{color:'#E040FB'}}>{(data.weather_events?.length||0)}</div></div>
+                          <div><div className="hud-label" style={{fontSize:'6px'}}>NUC</div><div className="hud-value text-[9px]" style={{color:'#76FF03'}}>{(data.infrastructure?.length||0)}</div></div>
+                        </div>
+                      </div>
+                      <LayerPanel data={data} activeLayers={activeLayers} setActiveLayers={setActiveLayers} />
+                      <div className="mt-2">
+                        <ViewPresets onNavigate={(lat, lng, zoom) => { setFlyToLocation({ lat, lng, ts: Date.now() }); setMapView(v => ({ ...v, zoom })); setMobilePanel(null); }} />
+                      </div>
+                    </>
+                  )}
+                  {mobilePanel === 'markets' && <MarketsPanel data={data} spaceWeather={spaceWeather} />}
+                  {mobilePanel === 'intel' && <IntelFeed data={data} onLocate={(lat, lng) => { setFlyToLocation({ lat, lng, ts: Date.now() }); setMobilePanel(null); }} />}
+                  {mobilePanel === 'search' && (
+                    <div className="space-y-2">
+                      <SearchBar onLocate={(lat, lng) => { setFlyToLocation({ lat, lng, ts: Date.now() }); setMobilePanel(null); }} />
+                      <SharePanel mapView={mapView} activeLayers={activeLayers} mouseCoords={mouseCoords} />
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </>
+      )}
+
+      {/* ── BOTTOM CENTER (desktop) ── */}
+      {!isMobile && (
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 3, duration: 0.8 }} className="desktop-only absolute bottom-5 left-1/2 -translate-x-1/2 z-[200] pointer-events-auto">
+          <div className="glass-panel px-5 py-2.5 flex items-center gap-5 osiris-glow">
+            <div className="flex flex-col items-center min-w-[110px]">
+              <div className="hud-label">COORDINATES</div>
+              <div className="text-[10px] font-mono font-bold text-[var(--gold-primary)] tracking-wide">{mouseCoords ? `${mouseCoords.lat.toFixed(4)}, ${mouseCoords.lng.toFixed(4)}` : '—'}</div>
+            </div>
+            <div className="w-px h-7 bg-[var(--border-primary)]" />
+            <div className="flex flex-col items-center min-w-[160px] max-w-[280px]">
+              <div className="hud-label">LOCATION</div>
+              <div className="text-[9px] text-[var(--text-secondary)] font-mono truncate max-w-[280px]">{locationLabel || 'Hover over map...'}</div>
+            </div>
+            <div className="w-px h-7 bg-[var(--border-primary)]" />
+            <div className="flex flex-col items-center">
+              <div className="hud-label">ZOOM</div>
+              <div className="text-[10px] font-mono font-bold text-[var(--gold-primary)]">{mapView.zoom.toFixed(1)}</div>
+            </div>
+          </div>
+        </motion.div>
+      )}
+
+      {/* ── Scale Bar (desktop) ── */}
+      <div className="desktop-only absolute bottom-[4.5rem] left-[20rem] z-[201] pointer-events-none">
         <ScaleBar zoom={mapView.zoom} latitude={mapView.latitude} />
       </div>
 
       {/* ── Region Dossier ── */}
       {(regionDossier || dossierLoading) && (
-        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="absolute top-20 left-1/2 -translate-x-1/2 z-[300] w-[480px] max-h-[65vh] overflow-y-auto styled-scrollbar">
+        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="absolute top-16 md:top-20 left-2 right-2 md:left-1/2 md:right-auto md:-translate-x-1/2 z-[300] md:w-[480px] max-h-[65vh] overflow-y-auto styled-scrollbar">
           <div className="glass-panel p-5 osiris-glow">
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-sm font-mono font-bold text-[var(--gold-primary)] tracking-wider">REGION DOSSIER</h2>
@@ -421,7 +517,7 @@ export default function Dashboard() {
       <KeyboardShortcuts />
 
       {/* Shortcut hint */}
-      <div className="absolute bottom-2 right-5 z-[200] pointer-events-none text-[6px] font-mono text-[var(--text-muted)]/40 tracking-widest">
+      <div className="desktop-only absolute bottom-2 right-5 z-[200] pointer-events-none text-[6px] font-mono text-[var(--text-muted)]/40 tracking-widest">
         [?] SHORTCUTS · [F] FULLSCREEN · [S] SHARE · [R] RESET VIEW
       </div>
     </main>
