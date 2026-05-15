@@ -5,18 +5,19 @@ let simulatedAlerts: any[] = [];
 let lastUpdate = Date.now();
 
 const ZONES = [
-  // Israel / Lebanon / Gaza
-  { origin: { lat: 33.1, lng: 35.3 }, target: { lat: 32.8, lng: 34.98 }, name: 'Haifa', originName: 'Southern Lebanon', type: 'ROCKET' },
-  { origin: { lat: 33.1, lng: 35.3 }, target: { lat: 33.0, lng: 35.1 }, name: 'Nahariya', originName: 'Southern Lebanon', type: 'ROCKET' },
-  { origin: { lat: 31.5, lng: 34.46 }, target: { lat: 31.65, lng: 34.56 }, name: 'Ashkelon', originName: 'Gaza', type: 'ROCKET' },
-  { origin: { lat: 31.5, lng: 34.46 }, target: { lat: 31.51, lng: 34.59 }, name: 'Sderot', originName: 'Gaza', type: 'ROCKET' },
-  { origin: { lat: 31.5, lng: 34.46 }, target: { lat: 32.08, lng: 34.78 }, name: 'Tel Aviv', originName: 'Gaza', type: 'BALLISTIC_MISSILE' },
+  // Israel Strikes on Lebanon / Gaza
+  { origin: { lat: 32.8, lng: 34.98 }, target: { lat: 33.89, lng: 35.50 }, name: 'Beirut', originName: 'Israel', type: 'AIRSTRIKE' },
+  { origin: { lat: 33.0, lng: 35.1 }, target: { lat: 33.27, lng: 35.20 }, name: 'Tyre (South Lebanon)', originName: 'Israel', type: 'ARTILLERY_STRIKE' },
+  { origin: { lat: 31.65, lng: 34.56 }, target: { lat: 31.5, lng: 34.46 }, name: 'Gaza Strip', originName: 'Israel', type: 'AIRSTRIKE' },
+  { origin: { lat: 31.51, lng: 34.59 }, target: { lat: 31.28, lng: 34.24 }, name: 'Rafah', originName: 'Israel', type: 'DRONE_STRIKE' },
+  
   // Ukraine / Russia
   { origin: { lat: 50.6, lng: 36.6 }, target: { lat: 50.0, lng: 36.2 }, name: 'Kharkiv', originName: 'Belgorod', type: 'BALLISTIC_MISSILE' },
   { origin: { lat: 46.5, lng: 39.5 }, target: { lat: 46.48, lng: 30.73 }, name: 'Odesa', originName: 'Black Sea', type: 'CRUISE_MISSILE' },
   { origin: { lat: 53.0, lng: 30.0 }, target: { lat: 50.45, lng: 30.52 }, name: 'Kyiv', originName: 'Belarus', type: 'UAV_SWARM' },
-  // Red Sea / Yemen
-  { origin: { lat: 15.3, lng: 44.2 }, target: { lat: 29.55, lng: 34.95 }, name: 'Eilat', originName: 'Yemen', type: 'BALLISTIC_MISSILE' },
+  
+  // Israel Strikes on Yemen
+  { origin: { lat: 29.55, lng: 34.95 }, target: { lat: 14.80, lng: 42.95 }, name: 'Hodeidah Port (Yemen)', originName: 'Israel', type: 'AIRSTRIKE' },
 ];
 
 function generateId() {
