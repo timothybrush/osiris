@@ -15,6 +15,7 @@ interface OsirisMapProps {
   projection?: 'mercator' | 'globe';
   mapStyle?: string;
   sweepData?: any;
+  scanTargets?: any[];
 }
 
 function computeSolarTerminator(): [number, number][] {
@@ -39,7 +40,7 @@ function computeSolarTerminator(): [number, number][] {
 
 const EMPTY_FC = { type: 'FeatureCollection' as const, features: [] };
 
-function OsirisMap({ data, activeLayers, onEntityClick, onMouseCoords, onRightClick, onViewStateChange, flyToLocation, projection = 'globe', mapStyle = 'dark', sweepData }: OsirisMapProps) {
+function OsirisMap({ data, activeLayers, onEntityClick, onMouseCoords, onRightClick, onViewStateChange, flyToLocation, projection = 'globe', mapStyle = 'dark', sweepData, scanTargets = [] }: OsirisMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const popupRef = useRef<maplibregl.Popup | null>(null);
@@ -108,7 +109,7 @@ function OsirisMap({ data, activeLayers, onEntityClick, onMouseCoords, onRightCl
       createDot(map, 'dot-cctv', '#39FF14', 10);
 
       // Sources
-      const sources = ['flights','military','jets','private-fl','satellites','earthquakes','gdelt','gps-jamming','day-night','cctv','fires','weather','infrastructure','maritime','maritime-choke','maritime-ships','live-news','sigint-news','conflict-zones', 'war-alerts-targets', 'war-alerts-lines', 'balloons', 'radiation', 'ip-sweep-devices', 'ip-sweep-pulse', 'ip-sweep-connections'];
+      const sources = ['flights','military','jets','private-fl','satellites','earthquakes','gdelt','gps-jamming','day-night','cctv','fires','weather','infrastructure','maritime','maritime-choke','maritime-ships','live-news','sigint-news','conflict-zones', 'war-alerts-targets', 'war-alerts-lines', 'balloons', 'radiation', 'ip-sweep-devices', 'ip-sweep-pulse', 'ip-sweep-connections', 'scan-targets'];
       sources.forEach(s => map.addSource(s, { type: 'geojson', data: EMPTY_FC }));
 
       // ── CONFLICT ZONES — small warning markers (not polygons) ──
@@ -354,6 +355,21 @@ function OsirisMap({ data, activeLayers, onEntityClick, onMouseCoords, onRightCl
         'text-color': ['get', 'color'], 'text-halo-color': '#000', 'text-halo-width': 1.5, 'text-opacity': 0.9,
       }});
 
+      // ══ SCAN TARGETS — Geolocated individual scans ══
+      map.addLayer({ id: 'scan-targets-glow', type: 'circle', source: 'scan-targets', paint: {
+        'circle-radius': ['interpolate',['linear'],['zoom'], 1,12, 5,25, 10,40],
+        'circle-color': '#FF3D3D', 'circle-opacity': 0.2, 'circle-blur': 1,
+      }});
+      map.addLayer({ id: 'scan-targets-dots', type: 'circle', source: 'scan-targets', paint: {
+        'circle-radius': ['interpolate',['linear'],['zoom'], 1,5, 5,8, 10,12],
+        'circle-color': '#FF3D3D', 'circle-opacity': 0.95,
+        'circle-stroke-width': 2, 'circle-stroke-color': '#FFFFFF', 'circle-stroke-opacity': 0.8,
+      }});
+      map.addLayer({ id: 'scan-targets-label', type: 'symbol', source: 'scan-targets', layout: {
+        'text-field': ['get', 'id'], 'text-size': 11, 'text-font': ['Open Sans Bold'],
+        'text-offset': [0, 2], 'text-max-width': 14, 'text-allow-overlap': false,
+      }, paint: { 'text-color': '#FF3D3D', 'text-halo-color': '#000', 'text-halo-width': 1.5, 'text-opacity': 0.9 }});
+
       // Flight layers (WebGL symbol — GPU rendered, handles 50K+ smooth)
       const flightLayers = [
         { id: 'fl-commercial', src: 'flights', icon: 'plane-cyan' },
@@ -566,9 +582,24 @@ function OsirisMap({ data, activeLayers, onEntityClick, onMouseCoords, onRightCl
 
 
     // ── Generic hover for clickables ──
-    ['conflict-icons','cctv-dots','eq-circles','sat-dots','fires-heat','gdelt-dots','weather-dots','infra-dots','maritime-dots','choke-dots','news-dots','sigint-news-dots','balloon-dots','rad-dots','ship-dots','sweep-device-dots'].forEach(layer => {
+    ['conflict-icons','cctv-dots','eq-circles','sat-dots','fires-heat','gdelt-dots','weather-dots','infra-dots','maritime-dots','choke-dots','news-dots','sigint-news-dots','balloon-dots','rad-dots','ship-dots','sweep-device-dots','scan-targets-dots'].forEach(layer => {
       map.on('mouseenter', layer, () => { map.getCanvas().style.cursor = 'pointer'; });
       map.on('mouseleave', layer, () => { map.getCanvas().style.cursor = ''; });
+    });
+
+    // ── Scan Targets click ──
+    map.on('click', 'scan-targets-dots', (e: any) => {
+      const p = e.features?.[0]?.properties;
+      if (!p) return;
+      const coords = e.features[0].geometry.coordinates.slice();
+      popup(coords, `<div style="${pStyle}border:1px solid rgba(255,61,61,0.5);">
+        <div style="color:#FF3D3D;font-size:12px;font-weight:700;margin-bottom:6px;">🎯 TARGET: ${p.id}</div>
+        <div style="font-size:9px;color:#E8E6E0;margin-bottom:8px;">${p.city || 'Unknown'}, ${p.country || 'Unknown'} — ${p.isp || 'Unknown ISP'}</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;font-size:9px;">
+          <div><span style="color:#5C5A54;">TYPE</span><br/><span style="color:#00E5FF;">${(p.type || 'UNKNOWN').toUpperCase()}</span></div>
+          <div><span style="color:#5C5A54;">COORDS</span><br/><span style="color:#E8E6E0;">${coords[1].toFixed(3)}°, ${coords[0].toFixed(3)}°</span></div>
+        </div>
+      </div>`);
     });
 
     // ── IP Sweep device click ──
@@ -976,6 +1007,21 @@ function OsirisMap({ data, activeLayers, onEntityClick, onMouseCoords, onRightCl
 
     return () => clearTimeout(timer);
   }, [mapReady, sweepData, setGeo]);
+
+  // Scan Targets visualization
+  useEffect(() => {
+    if (!mapReady || !mapRef.current || !scanTargets) return;
+    const map = mapRef.current;
+    
+    const features = scanTargets.map(t => ({
+      type: 'Feature' as const,
+      geometry: { type: 'Point' as const, coordinates: [t.lng, t.lat] },
+      properties: { ...t }
+    }));
+    
+    const src = map.getSource('scan-targets') as maplibregl.GeoJSONSource;
+    if (src) src.setData({ type: 'FeatureCollection', features });
+  }, [scanTargets, mapReady]);
 
   // Fly-to
   useEffect(() => {

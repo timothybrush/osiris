@@ -99,6 +99,7 @@ export default function Dashboard() {
   const [mapProjection, setMapProjection] = useState<'globe'|'mercator'>('globe');
   const [mapStyle, setMapStyle] = useState<'dark'|'satellite'>('dark');
   const [sweepData, setSweepData] = useState<any>(null);
+  const [scanTargets, setScanTargets] = useState<any[]>([]);
 
   const isMobile = useIsMobile();
   const startTime = useRef(Date.now());
@@ -594,8 +595,10 @@ export default function Dashboard() {
           onViewStateChange={setMapView} 
           flyToLocation={flyToLocation}
           sweepData={sweepData}
+          scanTargets={scanTargets}
         />
       </ErrorBoundary>
+
 
       {/* ── MAP VIEW CONTROLS (3D/2D + SATELLITE TOGGLE) ── */}
       <motion.div
@@ -732,7 +735,13 @@ export default function Dashboard() {
           <div className="flex-1"><SearchBar onLocate={(lat, lng) => setFlyToLocation({ lat, lng, ts: Date.now() })} /></div>
           <div className="relative"><SharePanel mapView={mapView} activeLayers={activeLayers} mouseCoords={mouseCoords} /></div>
         </div>
-        <OsintPanel onSweepVisualize={setSweepData} />
+        <OsintPanel onSweepVisualize={setSweepData} onScanGeolocate={(target, data) => {
+          setScanTargets(prev => {
+            const existing = prev.filter(t => t.id !== target);
+            return [{ id: target, timestamp: Date.now(), ...data }, ...existing].slice(0, 10);
+          });
+          setFlyToLocation({ lat: data.lat, lng: data.lng, ts: Date.now() });
+        }} />
         <LiveAlerts data={data} onLocate={(lat, lng) => setFlyToLocation({ lat, lng, ts: Date.now() })} onWatchFeed={(url, name) => { setLiveFeedUrl(url); setLiveFeedName(name); }} />
       </div>
 

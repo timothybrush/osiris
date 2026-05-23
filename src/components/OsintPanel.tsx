@@ -12,7 +12,7 @@ import {
 
 const TABS = [
   { id: 'scanner', label: 'PORT SCAN', icon: Radar, placeholder: 'IP or hostname', color: '#00E5FF' },
-  { id: 'vuln', label: 'VULN SCAN', icon: Bug, placeholder: 'IP or hostname', color: '#FF3D3D' },
+  { id: 'vuln', label: 'VULN SWEEP', icon: Bug, placeholder: 'IP or hostname', color: '#FF3D3D' },
 
   { id: 'dns', label: 'DNS', icon: Server, placeholder: 'Domain name', color: '#448AFF' },
   { id: 'whois', label: 'WHOIS', icon: FileText, placeholder: 'Domain name', color: '#FFD700' },
@@ -25,9 +25,9 @@ const TABS = [
   { id: 'sweep', label: 'IP SWEEP', icon: Crosshair, placeholder: 'Enter IP address (e.g. 8.8.8.8)', color: '#FF3D3D' },
 ];
 
-interface OsintPanelProps { isOpen?: boolean; onClose?: () => void; isMobile?: boolean; onSweepVisualize?: (data: any) => void; }
+interface OsintPanelProps { isOpen?: boolean; onClose?: () => void; isMobile?: boolean; onSweepVisualize?: (data: any) => void; onScanGeolocate?: (target: string, data: any) => void; }
 
-function OsintPanelInner({ isMobile, onSweepVisualize }: OsintPanelProps) {
+function OsintPanelInner({ isMobile, onSweepVisualize, onScanGeolocate }: OsintPanelProps) {
   const [activeTab, setActiveTab] = useState('scanner');
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [query, setQuery] = useState('');
@@ -72,17 +72,18 @@ function OsintPanelInner({ isMobile, onSweepVisualize }: OsintPanelProps) {
     if (!query.trim() || loading) return;
     setLoading(true); setError(''); setResults(null);
 
-    // IP Sweep — separate flow
-    if (activeTab === 'sweep') {
+    // IP Sweep / Vuln Scan — separate flow
+    if (activeTab === 'sweep' || activeTab === 'vuln') {
       setSweepResult(null);
       setSweepProgress({ current: 0, total: Math.pow(2, 32 - sweepCidr) });
       try {
-        const res = await fetch(`/api/osint/sweep?ip=${encodeURIComponent(query)}&cidr=${sweepCidr}`);
+        const cidr = sweepCidr;
+        const res = await fetch(`/api/osint/sweep?ip=${encodeURIComponent(query)}&cidr=${cidr}`);
         if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || `Sweep failed (${res.status})`); }
         const data = await res.json();
         setSweepResult(data);
         setSweepProgress(null);
-        setHistory(prev => [{ tab: 'sweep', query, time: new Date().toLocaleTimeString() }, ...prev.slice(0, 9)]);
+        setHistory(prev => [{ tab: activeTab, query, time: new Date().toLocaleTimeString() }, ...prev.slice(0, 9)]);
       } catch (err: any) {
         setError(err.message);
         setSweepProgress(null);
@@ -101,7 +102,6 @@ function OsintPanelInner({ isMobile, onSweepVisualize }: OsintPanelProps) {
         case 'whois': url = `/api/osint/whois?domain=${encodeURIComponent(query)}`; break;
         case 'threats': url = `/api/osint/threats?query=${encodeURIComponent(query)}`; break;
         case 'scanner': url = `/api/scanner?target=${encodeURIComponent(query)}&type=${scanType}`; break;
-        case 'vuln': url = `/api/scanner?target=${encodeURIComponent(query)}&type=vuln`; break;
         case 'headers': url = `/api/scanner?target=${encodeURIComponent(query)}&type=headers`; break;
         case 'ssl': url = `/api/scanner?target=${encodeURIComponent(query)}&type=ssl`; break;
         case 'subdomains': url = `/api/scanner?target=${encodeURIComponent(query)}&type=subdomains`; break;
@@ -112,6 +112,19 @@ function OsintPanelInner({ isMobile, onSweepVisualize }: OsintPanelProps) {
       if (res.ok) {
         setResults(data);
         setHistory(prev => [{ tab: activeTab, query, time: new Date().toLocaleTimeString() }, ...prev.slice(0, 9)]);
+        
+        // Geolocate the target in the background
+        if (activeTab !== 'sweep' && activeTab !== 'vuln') {
+          fetch(`/api/osint/ip?ip=${encodeURIComponent(query)}`)
+            .then(r => r.json())
+            .then(locData => {
+              if (locData && locData.geo && locData.geo.lat && locData.geo.lon && onScanGeolocate) {
+                // ip-api returns lat/lon, we pass it up
+                onScanGeolocate(query, { lat: locData.geo.lat, lng: locData.geo.lon, ...locData, type: activeTab });
+              }
+            })
+            .catch(() => {});
+        }
       } else {
         setError(data.error || 'Lookup failed');
       }
@@ -418,7 +431,7 @@ function OsintPanelInner({ isMobile, onSweepVisualize }: OsintPanelProps) {
             <option value="quick">QUICK SCAN</option><option value="deep">DEEP SCAN</option><option value="ports">TOP 1000 PORTS</option>
           </select>
         )}
-        {activeTab === 'sweep' && (
+        {(activeTab === 'sweep' || activeTab === 'vuln') && (
           <div className="flex items-center justify-between bg-[var(--bg-primary)]/60 border border-[var(--border-primary)] rounded-lg p-1">
             <span className="text-[9px] font-mono text-[var(--text-muted)] pl-2">SUBNET MASK:</span>
             <div className="flex items-center gap-0.5">
