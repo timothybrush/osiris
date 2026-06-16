@@ -43,13 +43,13 @@ async function fetchTfLCameras(): Promise<any[]> {
         source: 'TfL',
       };
     }).filter((c: any) => c.lat && c.lng);
-  } catch { return []; }
+  } catch (e) { return []; }
 }
 
 // ── US-WEST: WSDOT Washington State (~500) ──
 async function fetchWSDOTCameras(): Promise<any[]> {
   try {
-    const res = await stealthFetch('https://data.wsdot.wa.gov/log/public/cameras.json', { signal: AbortSignal.timeout(10000) });
+    const res = await stealthFetch('https://data.wsdot.wa.gov/log/public/cameras.json', { signal: AbortSignal.timeout(2000) });
     if (!res.ok) return [];
     const data = await res.json();
     return (data || []).map((cam: any) => ({
@@ -57,27 +57,27 @@ async function fetchWSDOTCameras(): Promise<any[]> {
       name: cam.Title || 'WSDOT Camera', city: 'Washington', country: 'US',
       feed_url: cam.ImageURL || '', source: 'WSDOT',
     })).filter((c: any) => c.lat && c.lng && c.feed_url);
-  } catch { return []; }
+  } catch (e) { return []; }
 }
 
 // ── US-WEST: Caltrans California Districts ──
 async function fetchCaltransCameras(): Promise<any[]> {
-  const allCams: any[] = [];
-  for (const dist of ['d03', 'd04', 'd05', 'd06', 'd07', 'd08', 'd10', 'd11', 'd12']) {
-    try {
-      const res = await stealthFetch(`https://cwwp2.dot.ca.gov/data/${dist}/cctv/cctvStatus${dist.toUpperCase()}.json`, { signal: AbortSignal.timeout(8000) });
-      if (!res.ok) continue;
-      const data = await res.json();
-      for (const cam of (data?.data || [])) {
-        const lat = parseFloat(cam.location?.latitude);
-        const lng = parseFloat(cam.location?.longitude);
-        const url = cam.cctv?.imageData?.static?.currentImageURL;
-        if (!lat || !lng || !url) continue;
-        allCams.push({ id: `cal-${allCams.length}`, lat, lng, name: cam.location?.locationName || 'Caltrans', city: 'California', country: 'US', feed_url: url, source: 'Caltrans' });
-      }
-    } catch { /* silent */ }
-  }
-  return allCams;
+  const dists = ['d03', 'd04', 'd05', 'd06', 'd07', 'd08', 'd10', 'd11', 'd12'];
+  const results = await Promise.allSettled(dists.map(async (dist) => {
+    const res = await fetch(`https://cwwp2.dot.ca.gov/data/${dist}/cctv/cctvStatus${dist.toUpperCase()}.json`, { signal: AbortSignal.timeout(8000), cache: 'no-store' });
+    if (!res.ok) return [];
+    const data = await res.json();
+    const distCams = [];
+    for (const cam of (data?.data || [])) {
+      const lat = parseFloat(cam.cctv?.location?.latitude || cam.location?.latitude);
+      const lng = parseFloat(cam.cctv?.location?.longitude || cam.location?.longitude);
+      const url = cam.cctv?.imageData?.static?.currentImageURL;
+      if (!lat || !lng || !url) continue;
+      distCams.push({ id: `cal-${Math.random().toString(36).substr(2,9)}`, lat, lng, name: cam.cctv?.location?.locationName || cam.location?.locationName || 'Caltrans', city: 'California', country: 'US', feed_url: url, source: 'Caltrans' });
+    }
+    return distCams;
+  }));
+  return results.flatMap(r => r.status === 'fulfilled' ? r.value : []);
 }
 
 // ── CANADA: Ottawa, Toronto, Montreal, Quebec ──
@@ -86,7 +86,7 @@ async function fetchCanadaCameras(): Promise<any[]> {
 
   // Ottawa Municipal Cameras (Comprehensive)
   try {
-    const res = await stealthFetch('https://traffic.ottawa.ca/beta/camera_list', { signal: AbortSignal.timeout(10000) });
+    const res = await stealthFetch('https://traffic.ottawa.ca/beta/camera_list', { signal: AbortSignal.timeout(2000) });
     if (res.ok) {
       const data = await res.json();
       for (const cam of (data || [])) {
@@ -98,7 +98,7 @@ async function fetchCanadaCameras(): Promise<any[]> {
         });
       }
     }
-  } catch { /* silent */ }
+  } catch (e) { /* silent */ }
 
   // Quebec 511 (Comprehensive - covers Montreal, Quebec City, highways)
   try {
@@ -119,7 +119,7 @@ async function fetchCanadaCameras(): Promise<any[]> {
         });
       }
     }
-  } catch { /* silent */ }
+  } catch (e) { /* silent */ }
 
   // Ontario 511 (MTO Highway Cameras)
   try {
@@ -135,7 +135,7 @@ async function fetchCanadaCameras(): Promise<any[]> {
         });
       }
     }
-  } catch { /* silent */ }
+  } catch (e) { /* silent */ }
 
   // Ville de Montréal municipal cameras
   try {
@@ -150,7 +150,7 @@ async function fetchCanadaCameras(): Promise<any[]> {
         });
       }
     }
-  } catch { /* silent */ }
+  } catch (e) { /* silent */ }
 
   // Curated Toronto cameras (fallback if 511ON fails)
   const curated = [
@@ -174,7 +174,7 @@ async function fetchCanadaCameras(): Promise<any[]> {
         });
       }
     }
-  } catch { /* silent */ }
+  } catch (e) { /* silent */ }
 
 
   // Toronto Open Data Municipal Traffic Cameras
@@ -194,7 +194,7 @@ async function fetchCanadaCameras(): Promise<any[]> {
         });
       }
     }
-  } catch { /* silent */ }
+  } catch (e) { /* silent */ }
 
   // British Columbia HighwayCams (Live JSON API)
   try {
@@ -211,7 +211,7 @@ async function fetchCanadaCameras(): Promise<any[]> {
         });
       }
     }
-  } catch { /* silent */ }
+  } catch (e) { /* silent */ }
 
   return cams.filter((c: any) => c.lat && c.lng);
 }
@@ -233,7 +233,7 @@ async function fetchUSCentralCameras(): Promise<any[]> {
         });
       }
     }
-  } catch { /* silent */ }
+  } catch (e) { /* silent */ }
 
   return cams.filter((c: any) => c.lat && c.lng);
 }
@@ -289,7 +289,7 @@ async function fetchUSEastCameras(): Promise<any[]> {
         });
       }
     }
-  } catch { /* silent */ }
+  } catch (e) { /* silent */ }
 
 
   return cams.filter((c: any) => c.lat && c.lng);
@@ -313,7 +313,7 @@ async function fetchEuropeCameras(): Promise<any[]> {
         });
       }
     }
-  } catch { /* silent */ }
+  } catch (e) { /* silent */ }
 
   cams.push(...await fetchAsfinagCameras());
 
@@ -344,7 +344,7 @@ async function fetchAsiaCameras(): Promise<any[]> {
         });
       }
     }
-  } catch { /* silent */ }
+  } catch (e) { /* silent */ }
 
   return cams;
 }
@@ -397,7 +397,7 @@ async function fetchMiddleEastCameras(): Promise<any[]> {
 const REGION_FETCHERS: Record<string, () => Promise<any[]>> = {
   'middle-east': fetchMiddleEastCameras,
   'uk': fetchTfLCameras,
-  'us-west': async () => [...await fetchWSDOTCameras(), ...await fetchCaltransCameras()],
+  'us-west': async () => { const [w, c] = await Promise.all([fetchWSDOTCameras(), fetchCaltransCameras()]); return [...w, ...c]; },
   'us-east': fetchUSEastCameras,
   'us-central': fetchUSCentralCameras,
   'canada': fetchCanadaCameras,
