@@ -447,7 +447,7 @@ function getRegionsForBounds(lat: number, lng: number, radius: number): string[]
   const inGermany = lat > 47 && lat < 55.1 && lng > 5.8 && lng < 15.1;
   const inFrance = lat > 42.3 && lat < 51.1 && lng > -5 && lng < 8.3;
   const inSpain = lat > 27 && lat < 43.8 && lng > -18.2 && lng < 4.4;
-  const inPoland = lat > 49.0 && lat < 54.8 && lng > 14.1 && lng < 24.1;
+  const inPoland = lat > 49.0 && lat < 55.0 && lng > 14.1 && lng < 24.1;
   const inBalkans = inBulgaria || inGreece || inSerbia || inMacedonia || inRomania || inTurkey;
   const inWesternEurope = inItaly || inCzechia || inSlovakia || inGermany || inFrance || inSpain || inPoland;
 
