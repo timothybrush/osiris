@@ -780,44 +780,53 @@ export default function Dashboard() {
       </ErrorBoundary>
 
 
-      {/* ── MAP VIEW CONTROLS (3D/2D + SATELLITE TOGGLE) ── */}
+      {/* ── MAP VIEW CONTROLS (3D/2D + SATELLITE TOGGLE + SCALE BAR) ── */}
       <motion.div
         initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 3.5 }}
-        className="absolute bottom-[75px] md:bottom-[100px] z-[200] flex items-center gap-2 pointer-events-none"
+        className="absolute bottom-[75px] md:bottom-[100px] z-[200] flex flex-col gap-2 pointer-events-none"
         style={{ left: isMobile ? '12px' : '120px' }}
       >
-        {/* 3D/2D Toggle */}
-        <button
-          onClick={() => setMapProjection(p => p === 'globe' ? 'mercator' : 'globe')}
-          className="glass-panel p-3.5 pointer-events-auto hover:border-[var(--gold-primary)]/40 transition-colors group relative"
-          title={mapProjection === 'globe' ? 'Switch to 2D Map' : 'Switch to 3D Globe'}
-        >
-          {mapProjection === 'globe' ? (
-            <MapPinned className="w-5 h-5 text-[var(--gold-primary)] group-hover:scale-110 transition-transform" />
-          ) : (
-            <Globe className="w-5 h-5 text-[var(--cyan-primary)] group-hover:scale-110 transition-transform" />
-          )}
-          <span className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 text-[9px] font-mono text-[var(--text-muted)] whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity glass-panel px-2 py-1 z-[300]">
-            {mapProjection === 'globe' ? '2D MAP' : '3D GLOBE'}
-          </span>
-        </button>
+        {/* Toggle Buttons Row */}
+        <div className="flex items-center gap-2">
+          {/* 3D/2D Toggle */}
+          <button
+            onClick={() => setMapProjection(p => p === 'globe' ? 'mercator' : 'globe')}
+            className="glass-panel p-3.5 pointer-events-auto hover:border-[var(--gold-primary)]/40 transition-colors group relative"
+            title={mapProjection === 'globe' ? 'Switch to 2D Map' : 'Switch to 3D Globe'}
+          >
+            {mapProjection === 'globe' ? (
+              <Globe className="w-5 h-5 text-[var(--cyan-primary)] group-hover:scale-110 transition-transform" />
+            ) : (
+              <MapPinned className="w-5 h-5 text-[var(--gold-primary)] group-hover:scale-110 transition-transform" />
+            )}
+            <span className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 text-[9px] font-mono text-[var(--text-muted)] whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity glass-panel px-2 py-1 z-[300]">
+              {mapProjection === 'globe' ? '3D GLOBE' : '2D MAP'}
+            </span>
+          </button>
 
-        {/* Map Style Toggle */}
-        <button
-          onClick={() => setMapStyle(s => s === 'dark' ? 'satellite' : 'dark')}
-          className="glass-panel p-3.5 pointer-events-auto hover:border-[var(--gold-primary)]/40 transition-colors group relative"
-          title={mapStyle === 'dark' ? 'Satellite View' : 'Night View'}
-        >
-          {mapStyle === 'dark' ? (
-            <Satellite className="w-5 h-5 text-[var(--alert-green)] group-hover:scale-110 transition-transform" />
-          ) : (
-            <Moon className="w-5 h-5 text-[var(--cyan-primary)] group-hover:scale-110 transition-transform" />
-          )}
-          <span className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 text-[9px] font-mono text-[var(--text-muted)] whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity glass-panel px-2 py-1 z-[300]">
-            {mapStyle === 'dark' ? 'SATELLITE' : 'NIGHT MODE'}
-          </span>
-        </button>
+          {/* Map Style Toggle */}
+          <button
+            onClick={() => setMapStyle(s => s === 'dark' ? 'satellite' : 'dark')}
+            className="glass-panel p-3.5 pointer-events-auto hover:border-[var(--gold-primary)]/40 transition-colors group relative"
+            title={mapStyle === 'dark' ? 'Satellite View' : 'Night View'}
+          >
+            {mapStyle === 'dark' ? (
+              <Moon className="w-5 h-5 text-[var(--cyan-primary)] group-hover:scale-110 transition-transform" />
+            ) : (
+              <Satellite className="w-5 h-5 text-[var(--alert-green)] group-hover:scale-110 transition-transform" />
+            )}
+            <span className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 text-[9px] font-mono text-[var(--text-muted)] whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity glass-panel px-2 py-1 z-[300]">
+              {mapStyle === 'dark' ? 'NIGHT MODE' : 'SATELLITE'}
+            </span>
+          </button>
+        </div>
 
+        {/* Scale Bar — directly under toggle buttons */}
+        {!isMobile && (
+          <div className="pl-0.5">
+            <ScaleBar zoom={mapView.zoom} latitude={mapView.latitude} />
+          </div>
+        )}
       </motion.div>
 
       {/* ── HEADER ── */}
@@ -1159,10 +1168,7 @@ export default function Dashboard() {
         </motion.div>
       )}
 
-      {/* ── Scale Bar (desktop) ── */}
-      <div className="desktop-only absolute bottom-[4.5rem] left-[12rem] z-[201] pointer-events-none">
-        <ScaleBar zoom={mapView.zoom} latitude={mapView.latitude} />
-      </div>
+      {/* Scale bar is now integrated into the map controls section above */}
 
       {/* ── Region Dossier ── */}
       {(regionDossier || dossierLoading) && (

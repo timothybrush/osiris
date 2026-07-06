@@ -22,6 +22,7 @@ import { fetchSwitzerlandCameras } from './switzerland';
 import { fetchFinlandCameras } from './finland';
 import { fetchHongKongCameras } from './hongkong';
 import { fetchUtahCameras } from './utah';
+import { fetchIcelandCameras } from './iceland';
 
 /**
  * OSIRIS — Worldwide CCTV Camera API v2
@@ -65,24 +66,34 @@ async function fetchWSDOTCameras(): Promise<any[]> {
   } catch (e) { return []; }
 }
 
-// ── US-WEST: Caltrans California Districts ──
+// ── US-WEST: Caltrans California ──
 async function fetchCaltransCameras(): Promise<any[]> {
-  const dists = ['d03', 'd04', 'd05', 'd06', 'd07', 'd08', 'd10', 'd11', 'd12'];
-  const results = await Promise.allSettled(dists.map(async (dist) => {
-    const res = await fetch(`https://cwwp2.dot.ca.gov/data/${dist}/cctv/cctvStatus${dist.toUpperCase()}.json`, { signal: AbortSignal.timeout(8000), cache: 'no-store' });
+  try {
+    const res = await stealthFetch('https://caltrans-gis.dot.ca.gov/arcgis/rest/services/CHhighway/CCTV/FeatureServer/0/query?where=1%3D1&outFields=*&f=json', { signal: AbortSignal.timeout(12000) });
     if (!res.ok) return [];
     const data = await res.json();
-    const distCams = [];
-    for (const cam of (data?.data || [])) {
-      const lat = parseFloat(cam.cctv?.location?.latitude || cam.location?.latitude);
-      const lng = parseFloat(cam.cctv?.location?.longitude || cam.location?.longitude);
-      const url = cam.cctv?.imageData?.static?.currentImageURL;
+    const cams = [];
+    for (const feature of (data?.features || [])) {
+      const p = feature.attributes;
+      const lat = p.latitude;
+      const lng = p.longitude;
+      const url = p.currentImageURL;
       if (!lat || !lng || !url) continue;
-      distCams.push({ id: `cal-${Math.random().toString(36).substr(2,9)}`, lat, lng, name: cam.cctv?.location?.locationName || cam.location?.locationName || 'Caltrans', city: 'California', country: 'US', feed_url: url, source: 'Caltrans' });
+      cams.push({
+        id: `cal-${p.OBJECTID}`,
+        lat,
+        lng,
+        name: p.locationName || 'Caltrans',
+        city: p.nearbyPlace || p.county || 'California',
+        country: 'US',
+        feed_url: url,
+        source: 'Caltrans'
+      });
     }
-    return distCams;
-  }));
-  return results.flatMap(r => r.status === 'fulfilled' ? r.value : []);
+    return cams;
+  } catch (e) {
+    return [];
+  }
 }
 
 // ── CANADA: Ottawa, Toronto, Montreal, Quebec ──
@@ -427,6 +438,7 @@ const REGION_FETCHERS: Record<string, () => Promise<any[]>> = {
   'finland': fetchFinlandCameras,
   'hongkong': fetchHongKongCameras,
   'utah': fetchUtahCameras,
+  'iceland': fetchIcelandCameras,
 };
 
 // Determine which regions to fetch based on viewport bounds
@@ -459,8 +471,9 @@ function getRegionsForBounds(lat: number, lng: number, radius: number): string[]
   const inSpain = lat > 27 && lat < 43.8 && lng > -18.2 && lng < 4.4;
   const inPoland = lat > 49.0 && lat < 55.0 && lng > 14.1 && lng < 24.1;
   const inFinland = lat > 59.5 && lat < 70.1 && lng > 20 && lng < 31.6;
+  const inIceland = lat > 63.0 && lat < 67.0 && lng > -25.0 && lng < -13.0;
   const inBalkans = inBulgaria || inGreece || inSerbia || inMacedonia || inRomania || inTurkey;
-  const inWesternEurope = inItaly || inCzechia || inSlovakia || inGermany || inFrance || inSpain || inPoland || inFinland;
+  const inWesternEurope = inItaly || inCzechia || inSlovakia || inGermany || inFrance || inSpain || inPoland || inFinland || inIceland;
 
   if (lat > 35 && lat < 72 && lng > -11 && lng < 40 && !inBalkans && !inWesternEurope) {
     regions.push('europe');
@@ -479,6 +492,7 @@ function getRegionsForBounds(lat: number, lng: number, radius: number): string[]
   if (inSpain) regions.push('spain');
   if (inPoland) regions.push('poland');
   if (inFinland) regions.push('finland');
+  if (inIceland) regions.push('iceland');
 
   // Middle East
   const inMiddleEast = lat > 29 && lat < 34.5 && lng > 34 && lng < 36.5;
