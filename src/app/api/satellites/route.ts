@@ -214,7 +214,7 @@ function parseTLEText(text: string): { name: string; line1: string; line2: strin
   const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
   const sats: { name: string; line1: string; line2: string }[] = [];
   let i = 0;
-  while (i < lines.length - 2) {
+  while (i < lines.length - 1) {
     if (!lines[i].startsWith('1') && lines[i + 1]?.startsWith('1') && lines[i + 2]?.startsWith('2')) {
       sats.push({ name: lines[i].replace(/^0\s+/, '').trim(), line1: lines[i + 1], line2: lines[i + 2] });
       i += 3;

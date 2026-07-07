@@ -33,7 +33,7 @@ export async function GET(req: Request) {
           bbox,
           datetime,
           limit: 20,
-          sortby: [{ field: 'datetime', direction: 'desc' }],
+          sortby: [{ field: 'properties.datetime', direction: 'desc' }],
         }),
       });
       if (res.ok) {
@@ -56,7 +56,7 @@ export async function GET(req: Request) {
             bbox,
             datetime,
             limit: 20,
-            sortby: [{ field: 'datetime', direction: 'desc' }],
+            sortby: [{ field: 'properties.datetime', direction: 'desc' }],
           }),
         });
         if (res.ok) {

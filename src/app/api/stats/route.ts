@@ -57,7 +57,7 @@ export async function GET(req: Request) {
 
     if (weatherRes.status === 'fulfilled' && weatherRes.value.ok) {
       const data = await weatherRes.value.json();
-      weather = data.weather_events?.length || 0;
+      weather = data.events?.length || 0;
     }
 
     if (infraRes.status === 'fulfilled' && infraRes.value.ok) {
@@ -67,7 +67,7 @@ export async function GET(req: Request) {
 
     if (gdeltRes.status === 'fulfilled' && gdeltRes.value.ok) {
         const data = await gdeltRes.value.json();
-        incidents = data.gdelt?.length || 0;
+        incidents = data.events?.length || 0;
     }
 
     return NextResponse.json({
