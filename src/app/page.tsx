@@ -1023,7 +1023,15 @@ export default function Dashboard() {
           <AnimatePresence>
             {showRemote && (
               <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} className="absolute right-12 top-1/2 -translate-y-1/2 w-80">
-                <WorldRemote onClose={() => setShowRemote(false)} />
+                <WorldRemote onClose={() => setShowRemote(false)} onPlaceOnMap={(devs) => {
+                  setScanTargets(prev => {
+                    const ids = new Set(prev.map((t: any) => t.id));
+                    const next = [...prev];
+                    devs.forEach(d => { if (!ids.has(d.id)) next.unshift({ id: d.id, name: d.name, lat: d.lat, lng: d.lng, type: d.type, color: d.color, timestamp: Date.now(), source: 'BLE' }); });
+                    return next.slice(0, 20);
+                  });
+                  if (devs.length > 0) setFlyToLocation({ lat: devs[0].lat, lng: devs[0].lng, ts: Date.now() });
+                }} />
               </motion.div>
             )}
           </AnimatePresence>
@@ -1192,7 +1200,15 @@ export default function Dashboard() {
                     </div>
                   )}
                   {mobilePanel === 'remote' && (
-                    <WorldRemote onClose={() => setMobilePanel(null)} />
+                    <WorldRemote onClose={() => setMobilePanel(null)} onPlaceOnMap={(devs) => {
+                      setScanTargets(prev => {
+                        const ids = new Set(prev.map((t: any) => t.id));
+                        const next = [...prev];
+                        devs.forEach(d => { if (!ids.has(d.id)) next.unshift({ id: d.id, name: d.name, lat: d.lat, lng: d.lng, type: d.type, color: d.color, timestamp: Date.now(), source: 'BLE' }); });
+                        return next.slice(0, 20);
+                      });
+                      if (devs.length > 0) setFlyToLocation({ lat: devs[0].lat, lng: devs[0].lng, ts: Date.now() });
+                    }} />
                   )}
                 </div>
               </motion.div>
